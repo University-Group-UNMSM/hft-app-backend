@@ -6,14 +6,18 @@ import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import path = require("path");
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
-import type { Queue } from "aws-cdk-lib/aws-sqs";
+import { Queue } from "aws-cdk-lib/aws-sqs";
+import { Table } from "aws-cdk-lib/aws-dynamodb";
 
 type ExecuteOperationsStackProps = StackProps & {
   config: Readonly<ConfigProps>;
   operationsQueue: Queue;
+  userBalanceTable: Table;
 };
 
 export class ExecuteOperationsStack extends Stack {
+  readonly operationsHistoryQueue: Queue;
+
   constructor(
     scope: Construct,
     id: string,
@@ -22,6 +26,14 @@ export class ExecuteOperationsStack extends Stack {
     super(scope, id, props);
 
     const { config } = props;
+
+    const queueOperationsHistory = new Queue(this, "OperationsHistoryQueue", {
+      queueName: "queue-operations-history-" + config.STAGE,
+      visibilityTimeout: Duration.seconds(300),
+      retentionPeriod: Duration.days(1),
+    });
+
+    this.operationsHistoryQueue = queueOperationsHistory;
 
     const functionProcessOperationWithIBKApi = new NodejsFunction(
       this,
@@ -36,10 +48,21 @@ export class ExecuteOperationsStack extends Stack {
         entry: path.resolve(
           "src/execute-operations/lambdas/ProcessOperationWithBroker.ts"
         ),
+        environment: {
+          OPERATIONS_HISTORY_QUEUE_URL: queueOperationsHistory.queueUrl,
+        },
         functionName:
           "lambda-process-operation-with-broker-api-" + config.STAGE,
         timeout: Duration.seconds(30),
       }
+    );
+
+    queueOperationsHistory.grantSendMessages(
+      functionProcessOperationWithIBKApi
+    );
+
+    props.userBalanceTable.grantReadWriteData(
+      functionProcessOperationWithIBKApi
     );
 
     functionProcessOperationWithIBKApi.addEventSource(

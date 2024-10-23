@@ -21,6 +21,8 @@ type BalanceManagementStackProps = StackProps & {
 };
 
 export class BalanceManagementStack extends Stack {
+  readonly userBalanceTable: Table;
+
   constructor(
     scope: Construct,
     id: string,
@@ -54,6 +56,8 @@ export class BalanceManagementStack extends Stack {
         type: AttributeType.STRING,
       },
     });
+
+    this.userBalanceTable = tableUserBalance;
 
     // Default props to apply in lambdas
     const defaultLambdaProps: NodejsFunctionProps = {

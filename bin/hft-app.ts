@@ -27,9 +27,14 @@ const hftAppStack = new HftAppStack(app, "HftAppStack", {
   dataStream: dataExtractionStack.dataStream,
 });
 
-new BalanceManagementStack(app, "BalanceManagementStack", commonProperties);
+const balanceManagementStack = new BalanceManagementStack(
+  app,
+  "BalanceManagementStack",
+  commonProperties
+);
 
 new ExecuteOperationsStack(app, "ExecuteOperationsStack", {
   ...commonProperties,
   operationsQueue: hftAppStack.operationsQueue,
+  userBalanceTable: balanceManagementStack.userBalanceTable,
 });
