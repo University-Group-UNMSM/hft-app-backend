@@ -39,7 +39,7 @@ export const handler = async (event: SQSEvent): Promise<SQSBatchResponse> => {
           TableName: process.env.USER_BALANCE_TABLE_NAME,
           Key: marshall({
             userId: payload.userId,
-            aciveSymbol: payload.activeSymbol,
+            activeSymbol: payload.activeSymbol,
           }),
         })
       );

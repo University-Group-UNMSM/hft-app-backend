@@ -6,6 +6,7 @@ import { getConfig } from "../lib/config";
 import { BalanceManagementStack } from "../lib/balance-management-stack";
 import { DataExtractionStack } from "../lib/data-extraction-stack";
 import { ExecuteOperationsStack } from "../lib/execute-operations-stack";
+import { OperationsHistoryStack } from "../lib/operations-history-stack";
 
 const config = getConfig();
 
@@ -33,8 +34,17 @@ const balanceManagementStack = new BalanceManagementStack(
   commonProperties
 );
 
-new ExecuteOperationsStack(app, "ExecuteOperationsStack", {
+const executeOperationsStack = new ExecuteOperationsStack(
+  app,
+  "ExecuteOperationsStack",
+  {
+    ...commonProperties,
+    operationsQueue: hftAppStack.operationsQueue,
+    userBalanceTable: balanceManagementStack.userBalanceTable,
+  }
+);
+
+new OperationsHistoryStack(app, "OperationsHistoryStack", {
   ...commonProperties,
-  operationsQueue: hftAppStack.operationsQueue,
-  userBalanceTable: balanceManagementStack.userBalanceTable,
+  operationsHistoryQueue: executeOperationsStack.operationsHistoryQueue,
 });

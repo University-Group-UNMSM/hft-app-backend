@@ -37,7 +37,7 @@ export class DataExtractionStack extends Stack {
       this,
       "ScheduledEventToGetDataFromExternalSourcesRule",
       {
-        schedule: Schedule.rate(Duration.minutes(5)),
+        schedule: Schedule.rate(Duration.hours(1)),
       }
     );
 

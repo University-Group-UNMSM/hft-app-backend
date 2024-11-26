@@ -50,6 +50,7 @@ export class ExecuteOperationsStack extends Stack {
         ),
         environment: {
           OPERATIONS_HISTORY_QUEUE_URL: queueOperationsHistory.queueUrl,
+          USER_BALANCE_TABLE_NAME: props.userBalanceTable.tableName,
         },
         functionName:
           "lambda-process-operation-with-broker-api-" + config.STAGE,

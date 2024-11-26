@@ -68,7 +68,7 @@ function simulatePredictions() {
   const lstmPrediction = randomInt(-1, 2);
 
   // Combinamos las predicciones: si ambos modelos predicen lo mismo, lo usamos. Si no, elegimos mantener (0)
-  const finalPrediction = svmPrediction === lstmPrediction ? svmPrediction : 0;
+  const finalPrediction = svmPrediction < lstmPrediction ? svmPrediction : 0;
 
   return {
     svmPrediction,
