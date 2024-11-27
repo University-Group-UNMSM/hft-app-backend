@@ -62,6 +62,15 @@ export class BalanceManagementStack extends Stack {
 
     this.userBalanceTable = tableUserBalance;
 
+    const tableUsers = new Table(this, "UsersTable", {
+      tableName: "table-users-" + config.STAGE,
+      billingMode: BillingMode.PAY_PER_REQUEST,
+      partitionKey: {
+        name: "email",
+        type: AttributeType.STRING,
+      },
+    });
+
     // Default props to apply in lambdas
     const defaultLambdaProps: NodejsFunctionProps = {
       memorySize: 256,
@@ -72,6 +81,9 @@ export class BalanceManagementStack extends Stack {
       logRetention: RetentionDays.ONE_MONTH,
       environment: {
         USER_BALANCE_TABLE_NAME: tableUserBalance.tableName,
+        USERS_TABLE_NAME: tableUsers.tableName,
+        JWT_SECRET: config.JWT_SECRET,
+        SALT_ROUNDS: config.SALT_ROUNDS.toString(),
       },
     };
 
@@ -119,6 +131,22 @@ export class BalanceManagementStack extends Stack {
 
     tableUserBalance.grantReadWriteData(functionAddHoldings);
 
+    const functionRegisterUser = new NodejsFunction(this, "RegisterUser", {
+      ...defaultLambdaProps,
+      functionName: "lambda-register-user-" + config.STAGE,
+      entry: path.resolve("src/auth/lambdas/Register.ts"),
+    });
+
+    tableUsers.grantReadWriteData(functionRegisterUser);
+
+    const functionLogin = new NodejsFunction(this, "LoginUser", {
+      ...defaultLambdaProps,
+      functionName: "lambda-login-" + config.STAGE,
+      entry: path.resolve("src/auth/lambdas/Login.ts"),
+    });
+
+    tableUsers.grantReadWriteData(functionLogin);
+
     // Route to create a initial balance
     httpApi.addRoutes({
       path: "/balance",
@@ -146,6 +174,26 @@ export class BalanceManagementStack extends Stack {
       integration: new HttpLambdaIntegration(
         "AddHoldingsIntegration",
         functionAddHoldings
+      ),
+    });
+
+    // Route to register a new user
+    httpApi.addRoutes({
+      path: "/auth/register",
+      methods: [HttpMethod.POST],
+      integration: new HttpLambdaIntegration(
+        "RegisterUserIntegration",
+        functionRegisterUser
+      ),
+    });
+
+    // Route to login a user
+    httpApi.addRoutes({
+      path: "/auth/login",
+      methods: [HttpMethod.POST],
+      integration: new HttpLambdaIntegration(
+        "LoginUserIntegration",
+        functionLogin
       ),
     });
   }
