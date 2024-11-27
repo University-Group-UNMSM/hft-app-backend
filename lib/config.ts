@@ -14,6 +14,7 @@ export type ConfigProps = {
   AWS_REGION: string;
   AWS_ACCOUNT_ID: string;
   COINMARKETCAP_API_KEY: string;
+  HTTP_API_ID: string;
 };
 
 export const getConfig = (): ConfigProps => {
@@ -22,5 +23,6 @@ export const getConfig = (): ConfigProps => {
     AWS_REGION: process.env.AWS_REGION ?? "",
     AWS_ACCOUNT_ID: process.env.AWS_ACCOUNT_ID ?? "us-east-1",
     COINMARKETCAP_API_KEY: process.env.COINMARKETCAP_API_KEY ?? "",
+    HTTP_API_ID: process.env.HTTP_API_ID ?? "",
   };
 };

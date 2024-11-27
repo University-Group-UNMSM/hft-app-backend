@@ -22,6 +22,7 @@ type BalanceManagementStackProps = StackProps & {
 
 export class BalanceManagementStack extends Stack {
   readonly userBalanceTable: Table;
+  readonly httpApi: HttpApi;
 
   constructor(
     scope: Construct,
@@ -42,6 +43,8 @@ export class BalanceManagementStack extends Stack {
         allowOrigins: ["*"],
       },
     });
+
+    this.httpApi = httpApi;
 
     // Table to store user balance
     const tableUserBalance = new Table(this, "UserBalanceTable", {

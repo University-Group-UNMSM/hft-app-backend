@@ -8,6 +8,9 @@ import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import { Queue } from "aws-cdk-lib/aws-sqs";
 import { SqsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import path = require("path");
+import { HttpApi, HttpRoute, HttpRouteKey } from "aws-cdk-lib/aws-apigatewayv2";
+import { HttpMethod } from "aws-cdk-lib/aws-events";
+import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 
 type OperationsHistoryStackProps = StackProps & {
   config: Readonly<ConfigProps>;
@@ -23,6 +26,10 @@ export class OperationsHistoryStack extends Stack {
     super(scope, id, props);
 
     const { config } = props;
+
+    const httpApi = HttpApi.fromHttpApiAttributes(this, "HttpApi", {
+      httpApiId: config.HTTP_API_ID,
+    });
 
     const tableOperationsHistory = new Table(this, "OperationsHistoryTable", {
       tableName: "table-operations-history-" + config.STAGE,
@@ -60,6 +67,31 @@ export class OperationsHistoryStack extends Stack {
 
     tableOperationsHistory.grantReadWriteData(functionProcessHistoryOperation);
 
+    const functionGetOperationsHistoryByUser = new NodejsFunction(
+      this,
+      "GetOperationsHistoryByUseFunction",
+      {
+        memorySize: 256,
+        runtime: Runtime.NODEJS_20_X,
+        bundling: {
+          sourceMap: true,
+        },
+        timeout: Duration.seconds(30),
+        logRetention: RetentionDays.ONE_MONTH,
+        functionName: "lambda-get-operations-history-" + config.STAGE,
+        environment: {
+          OPERATIONS_HISTORY_TABLE_NAME: tableOperationsHistory.tableName,
+        },
+        entry: path.resolve(
+          "src/operations-history/lambdas/GetOperationsHistoryByUser.ts"
+        ),
+      }
+    );
+
+    tableOperationsHistory.grantReadWriteData(
+      functionGetOperationsHistoryByUser
+    );
+
     functionProcessHistoryOperation.addEventSource(
       new SqsEventSource(props.operationsHistoryQueue, {
         batchSize: 5,
@@ -67,5 +99,17 @@ export class OperationsHistoryStack extends Stack {
         maxConcurrency: 2,
       })
     );
+
+    new HttpRoute(this, "GetOperationsHistoryByUserRoute", {
+      httpApi,
+      routeKey: HttpRouteKey.with(
+        "/operations/history/{userId}",
+        HttpMethod.GET
+      ),
+      integration: new HttpLambdaIntegration(
+        "GetOperationsHistoryByUserIntegration",
+        functionGetOperationsHistoryByUser
+      ),
+    });
   }
 }
