@@ -27,7 +27,7 @@
     "@aws-sdk/client-sqs": "^3.662.0",
     "@aws-sdk/util-dynamodb": "^3.662.0",
     "aws-cdk-lib": "2.147.3",
-    "axios": "^1.7.7",
+    "axios": "^1.7.8",
     "constructs": "^10.0.0",
     "dotenv": "^16.4.5",
     "source-map-support": "^0.5.21"
