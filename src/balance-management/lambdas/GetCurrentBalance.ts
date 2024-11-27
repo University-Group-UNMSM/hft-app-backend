@@ -1,11 +1,11 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { DynamoDBClient, QueryCommand } from "@aws-sdk/client-dynamodb";
 import { unmarshall } from "@aws-sdk/util-dynamodb";
+import { decode } from "jsonwebtoken";
 
 const dynamoClient = new DynamoDBClient();
 
 export type UserBalanceItem = {
-  userId: string;
   activeSymbol: string;
   availableBalance: number;
   totalStocks: number;
@@ -16,22 +16,20 @@ export const handler = async (
   event: APIGatewayProxyEventV2
 ): Promise<APIGatewayProxyResultV2> => {
   try {
-    const userId = event.pathParameters?.userId;
+    const authHeader = event.headers["authorization"];
 
-    if (!userId) {
+    if (!authHeader) {
       return {
-        isBase64Encoded: false,
-        statusCode: 400,
+        statusCode: 401,
         body: JSON.stringify({
-          status: 400,
-          success: false,
-          message: "You need to provide the userId",
+          code: 401,
+          message: "Unauthorized",
         }),
-        headers: {
-          "content-type": "application/json",
-        },
       };
     }
+
+    const token = authHeader.split(" ")[1];
+    const decodedToken = decode(token) as { email: string; userId: string };
 
     // Consultar el balance disponible
     const cashQuery = await dynamoClient.send(
@@ -40,7 +38,7 @@ export const handler = async (
         KeyConditionExpression: "userId = :userId",
         ExpressionAttributeValues: {
           ":userId": {
-            S: userId,
+            S: decodedToken.userId,
           },
         },
       })

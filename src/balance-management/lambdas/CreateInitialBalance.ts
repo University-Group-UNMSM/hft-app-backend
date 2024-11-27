@@ -1,11 +1,11 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { marshall } from "@aws-sdk/util-dynamodb";
+import { decode } from "jsonwebtoken";
 
 const dynamoClient = new DynamoDBClient();
 
 export type CreateBalancePayload = {
-  userId: string;
   initialBalance: number;
 };
 
@@ -28,16 +28,31 @@ export const handler = async (
       };
     }
 
+    const authHeader = event.headers["authorization"];
+
+    if (!authHeader) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({
+          code: 401,
+          message: "Unauthorized",
+        }),
+      };
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decodedToken = decode(token) as { email: string; userId: string };
+
     const payload: CreateBalancePayload = JSON.parse(event.body);
 
-    if (!payload.userId || !payload.initialBalance) {
+    if (!payload.initialBalance) {
       return {
         isBase64Encoded: false,
         statusCode: 400,
         body: JSON.stringify({
           status: 400,
           success: false,
-          message: "userId and initialBalance are required",
+          message: "InitialBalance are required",
         }),
         headers: {
           "content-type": "application/json",
@@ -49,7 +64,7 @@ export const handler = async (
       new PutItemCommand({
         TableName: process.env.USER_BALANCE_TABLE_NAME,
         Item: marshall({
-          userId: payload.userId,
+          userId: decodedToken.userId,
           activeSymbol: "CASH",
           availableBalance: payload.initialBalance,
           totalStocks: 0,

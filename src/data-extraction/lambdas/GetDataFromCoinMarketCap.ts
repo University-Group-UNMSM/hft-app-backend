@@ -1,7 +1,7 @@
 import axios from "axios";
 import { KinesisClient, PutRecordCommand } from "@aws-sdk/client-kinesis";
 
-const hardcodedUserId = "f1c20422-47b5-4207-9c9c-479a0286e6d6";
+const hardcodedUserId = "4db39d37-0548-4a71-a610-6534b792cd03";
 
 export type CoinMarketCapResponse = {
   data: Array<{

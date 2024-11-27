@@ -1,11 +1,11 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from "aws-lambda";
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { marshall } from "@aws-sdk/util-dynamodb";
+import { decode } from "jsonwebtoken";
 
 const dynamoClient = new DynamoDBClient();
 
 export type AddHoldingsPayload = {
-  userId: string;
   activeSymbol: string;
   totalStocks: number;
 };
@@ -29,9 +29,24 @@ export const handler = async (
       };
     }
 
+    const authHeader = event.headers["authorization"];
+
+    if (!authHeader) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({
+          code: 401,
+          message: "Unauthorized",
+        }),
+      };
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decodedToken = decode(token) as { email: string; userId: string };
+
     const payload: AddHoldingsPayload = JSON.parse(event.body);
 
-    if (!payload.userId || !payload.totalStocks || !payload.activeSymbol) {
+    if (!payload.totalStocks || !payload.activeSymbol) {
       return {
         isBase64Encoded: false,
         statusCode: 400,
@@ -51,7 +66,7 @@ export const handler = async (
       new PutItemCommand({
         TableName: process.env.USER_BALANCE_TABLE_NAME,
         Item: marshall({
-          userId: payload.userId,
+          userId: decodedToken.userId,
           activeSymbol: payload.activeSymbol,
           totalStocks: payload.totalStocks,
           lastOperationTimestamp: new Date().toISOString(),
